@@ -1,0 +1,90 @@
+ 
+ 1          OPTIONS NONOTES NOSTIMER NOSOURCE NOSYNTAXCHECK;
+ 72         
+ 73         ********************************************************************
+ 74         *  Assignment:    Final Project
+ 75         *
+ 76         *  Description:   Using NHANES data to look at prevalence of diabetes
+ 77         *                 amongst different group characteristics
+ 78         *
+ 79         *  Name:          Alice Yu
+ 80         *
+ 81         *  Date:          4/11/2022
+ 82         *-------------------------------------------------------------------
+ 83         *  Job name:      final_alicewyu.sas
+ 84         *
+ 85         *  Purpose:       Convert .XPT to SAS Datasets
+ 86         *
+ 87         *
+ 88         *  Language:      SAS, VERSION 9.4
+ 89         *
+ 90         *  Input:         NHANES 2017-March 2020 pre-pandemic data:
+ 91         *                 P_DEMO, P_BMX, P_DIQ
+ 92         *
+ 93         *  Output:        SAS Dataset
+ 94         *
+ 95         *
+ 96         ********************************************************************;
+ 97         LIBNAME final "c:\Users\alwwi\Documents\bios669\final_proj\data";
+ NOTE: Libref FINAL was successfully assigned as follows: 
+       Engine:        V9 
+       Physical Name: c:\Users\alwwi\Documents\bios669\final_proj\data
+ 98         libname demoxpt xport "c:\Users\alwwi\Documents\bios669\final_proj\data\P_DEMO.xpt"
+ 98       ! access=readonly;
+ NOTE: Libref DEMOXPT was successfully assigned as follows: 
+       Engine:        XPORT 
+       Physical Name: c:\Users\alwwi\Documents\bios669\final_proj\data\P_DEMO.xpt
+ 99         proc copy inlib=demoxpt outlib=final; run;
+ 
+ NOTE: Input library DEMOXPT is sequential.
+ NOTE: Copying DEMOXPT.P_DEMO to FINAL.P_DEMO (memtype=DATA).
+ NOTE: BUFSIZE is not cloned when copying across different engines. 
+       System Option for BUFSIZE was used.
+ NOTE: There were 15560 observations read from the data set DEMOXPT.P_DEMO.
+ NOTE: The data set FINAL.P_DEMO has 15560 observations and 29 variables.
+ NOTE: PROCEDURE COPY used (Total process time):
+       real time           0.02 seconds
+       cpu time            0.03 seconds
+       
+ 
+ 100        
+ 101        libname bmxxpt xport "c:\Users\alwwi\Documents\bios669\final_proj\data\P_BMX.xpt"
+ 101      ! access=readonly;
+ NOTE: Libref BMXXPT was successfully assigned as follows: 
+       Engine:        XPORT 
+       Physical Name: c:\Users\alwwi\Documents\bios669\final_proj\data\P_BMX.xpt
+ 102        proc copy inlib=bmxxpt outlib=final; run;
+ 
+ NOTE: Input library BMXXPT is sequential.
+ NOTE: Copying BMXXPT.P_BMX to FINAL.P_BMX (memtype=DATA).
+ NOTE: BUFSIZE is not cloned when copying across different engines. 
+       System Option for BUFSIZE was used.
+ NOTE: There were 14300 observations read from the data set BMXXPT.P_BMX.
+ NOTE: The data set FINAL.P_BMX has 14300 observations and 22 variables.
+ NOTE: PROCEDURE COPY used (Total process time):
+       real time           0.01 seconds
+       cpu time            0.01 seconds
+       
+ 
+ 103        
+ 104        libname diqxpt xport "c:\Users\alwwi\Documents\bios669\final_proj\data\P_DIQ.xpt"
+ 104      ! access=readonly;
+ NOTE: Libref DIQXPT was successfully assigned as follows: 
+       Engine:        XPORT 
+       Physical Name: c:\Users\alwwi\Documents\bios669\final_proj\data\P_DIQ.xpt
+ 105        proc copy inlib=diqxpt outlib=final; run;
+ 
+ NOTE: Input library DIQXPT is sequential.
+ NOTE: Copying DIQXPT.P_DIQ to FINAL.P_DIQ (memtype=DATA).
+ NOTE: BUFSIZE is not cloned when copying across different engines. 
+       System Option for BUFSIZE was used.
+ NOTE: There were 14986 observations read from the data set DIQXPT.P_DIQ.
+ NOTE: The data set FINAL.P_DIQ has 14986 observations and 28 variables.
+ NOTE: PROCEDURE COPY used (Total process time):
+       real time           0.02 seconds
+       cpu time            0.01 seconds
+       
+ 
+ 106        
+ 107        OPTIONS NONOTES NOSTIMER NOSOURCE NOSYNTAXCHECK;
+ 119        

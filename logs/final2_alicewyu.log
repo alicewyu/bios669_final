@@ -1,0 +1,746 @@
+ 
+ 1          OPTIONS NONOTES NOSTIMER NOSOURCE NOSYNTAXCHECK;
+ NOTE: ODS statements in the SAS Studio environment may disable some output features.
+ 73         
+ 74         ********************************************************************
+ 75         *  Assignment:    Final Project
+ 76         *
+ 77         *  Description:   Using NHANES data to look at prevalence of diabetes
+ 78         *                 amongst different group characteristics
+ 79         *
+ 80         *  Name:          Alice Yu
+ 81         *
+ 82         *  Date:          4/11/2022
+ 83         *-------------------------------------------------------------------
+ 84         *  Job name:      final2_alicewyu.sas
+ 85         *
+ 86         *  Purpose:       Create graphs to show BMIs amongst different groups and
+ 87         *                 reports to show prevalence of diabetes
+ 88         *
+ 89         *  Language:      SAS, VERSION 9.4
+ 90         *
+ 91         *  Input:         NHANES 2017-March 2020 pre-pandemic data:
+ 92         *                 P_DEMO, P_BMX, P_DIQ
+ 93         *
+ 94         *  Output:        PDF
+ 95         *
+ 96         *
+ 97         ********************************************************************;
+ 98         %LET job=final;
+ 99         %LET onyen=alicewyu;
+ 100        %LET outdir=C:\Users\alwwi\Documents\bios669\final_proj;
+ 101        
+ 102        OPTIONS NODATE MPRINT MERGENOBY=WARN VARINITCHK=WARN;
+ 103        ODS _ALL_ CLOSE;
+ NOTE: ODS PDF(WEB) printed no output. 
+       (This sometimes results from failing to place a RUN statement before the ODS PDF(WEB) CLOSE 
+       statement.)
+ 104        
+ 105        FOOTNOTE "Job &job._&onyen run on &sysdate at &systime";
+ 106        
+ 107        LIBNAME final "c:\Users\alwwi\Documents\bios669\final_proj\data";
+ NOTE: Libref FINAL was successfully assigned as follows: 
+       Engine:        V9 
+       Physical Name: c:\Users\alwwi\Documents\bios669\final_proj\data
+ 108        ODS PDF FILE="&outdir\&job._&onyen..PDF" STYLE=JOURNAL;
+ NOTE: Writing ODS PDF output to DISK destination 
+       "C:\Users\alwwi\Documents\bios669\final_proj\final_alicewyu.PDF", printer "PDF".
+ 109        
+ 110        proc format;
+ 111        
+ 111      !  value bmif 1="Underweight"
+ 112        2="Normal Weight"
+ 113        3="Overweight"
+ 114        4="Obese";
+ NOTE: Format BMIF is already on the library WORK.FORMATS.
+ NOTE: Format BMIF has been output.
+ 115        
+ 115      !  value genderf 1="Male"
+ 116        2="Female";
+ NOTE: Format GENDERF is already on the library WORK.FORMATS.
+ NOTE: Format GENDERF has been output.
+ 117        
+ 117      !  value racef 1="Mexican American"
+ 118        2="Other Hispanic"
+ 119        3="Non-Hispanic White"
+ 120        4="Non-Hispanic Black"
+ 121        6="Non-Hispanic Asian"
+ 122        7="Other Race - Including Multi-Racial";
+ NOTE: Format RACEF is already on the library WORK.FORMATS.
+ NOTE: Format RACEF has been output.
+ 123        
+ 123      !  value diqf 1="Yes"
+ 124        2="No"
+ 125        3="Borderline"
+ 126        7="Refused"
+ 127        9="Don't Know";
+ NOTE: Format DIQF is already on the library WORK.FORMATS.
+ NOTE: Format DIQF has been output.
+ 128        
+ 128      !  value agef 1="2 to 19 Years old"
+ 129        2="20 to 40 Years old"
+ 130        3="41 to 60 Years old"
+ 131        4="61 to 80 Years old"
+ 132        5="81+ Years";
+ NOTE: Format AGEF is already on the library WORK.FORMATS.
+ NOTE: Format AGEF has been output.
+ 133        run;
+ 
+ NOTE: PROCEDURE FORMAT used (Total process time):
+       real time           0.00 seconds
+       cpu time            0.00 seconds
+       
+ 133      !     
+ 
+ 134        
+ 135        *looking at datasets;
+ 136        data demo; set final.p_demo; run;
+ 
+ NOTE: There were 15560 observations read from the data set FINAL.P_DEMO.
+ NOTE: The data set WORK.DEMO has 15560 observations and 29 variables.
+ NOTE: DATA statement used (Total process time):
+       real time           0.01 seconds
+       cpu time            0.01 seconds
+       
+ 
+ 137        data bmx; set final.p_bmx; run;
+ 
+ NOTE: There were 14300 observations read from the data set FINAL.P_BMX.
+ NOTE: The data set WORK.BMX has 14300 observations and 22 variables.
+ NOTE: DATA statement used (Total process time):
+       real time           0.01 seconds
+       cpu time            0.01 seconds
+       
+ 
+ 138        data diq; set final.p_diq; run;
+ 
+ NOTE: There were 14986 observations read from the data set FINAL.P_DIQ.
+ NOTE: The data set WORK.DIQ has 14986 observations and 28 variables.
+ NOTE: DATA statement used (Total process time):
+       real time           0.01 seconds
+       cpu time            0.03 seconds
+       
+ 
+ 139        
+ 140        *checking bmi calculations;
+ 141        *bmxwt - weight, bmxht - height;
+ 142        *wt/ht**2;
+ 143        data bmx_check;
+ 144        set bmx;
+ 145        
+ 146        if missing(bmxwt) or missing(bmxht) then bmi_check=.;
+ 147        else bmi_check=bmxwt/(bmxht**2);
+ 148        
+ 149        keep bmxwt bmxht bmxbmi bmi_check;
+ 150        run;
+ 
+ NOTE: There were 14300 observations read from the data set WORK.BMX.
+ NOTE: The data set WORK.BMX_CHECK has 14300 observations and 4 variables.
+ NOTE: DATA statement used (Total process time):
+       real time           0.01 seconds
+       cpu time            0.00 seconds
+       
+ 
+ 151        
+ 152        *merging datasets;
+ 153        proc sql;
+ 154        create table merged_set as
+ 155        select a.seqn, a.riagendr, a.RIDRETH3, a.RIDAGEYR, b.BMXBMI, b.BMDBMIC, c.DIQ010,
+ 155      ! a.WTMECPRP*a.WTINTPRP as samp_wt, a.SDMVPSU, a.SDMVSTRA
+ 156        from demo as a
+ 157        left join
+ 158        bmx as b
+ 159        on a.seqn=b.seqn
+ 160        left join diq as c
+ 161        on a.seqn=c.seqn;
+ NOTE: Table WORK.MERGED_SET created, with 15560 rows and 10 columns.
+ 
+ 162        quit;
+ NOTE: PROCEDURE SQL used (Total process time):
+       real time           0.05 seconds
+       cpu time            0.04 seconds
+       
+ 
+ 163        
+ 164        *categorizing ages;
+ 165        data diabetes;
+ 166        set merged_set;
+ 167        if ridageyr <= 19 then age_group=1;
+ 168        else if 19<ridageyr<=40 then age_group=2;
+ 169        else if 40<ridageyr<=60 then age_group=3;
+ 170        else if 60<ridageyr<=80 then age_group=4;
+ 171        else age_group=5;
+ 172        run;
+ 
+ NOTE: There were 15560 observations read from the data set WORK.MERGED_SET.
+ NOTE: The data set WORK.DIABETES has 15560 observations and 11 variables.
+ NOTE: DATA statement used (Total process time):
+       real time           0.01 seconds
+       cpu time            0.01 seconds
+       
+ 
+ 173        
+ 174        *creating graph of relationship between BMI and diabetes;
+ 175        %macro graph1(groupvar= ,var= );
+ 176        %if %upcase(&groupvar)=RIDRETH3 %then %do;
+ 177        %let formatvar=racef.;
+ 178        %end;
+ 179        %else %if %upcase(&groupvar)=RIAGENDR %then %do;
+ 180        %let formatvar=genderf.;
+ 181        %end;
+ 182        %else %if %upcase(&groupvar)=AGE_GROUP %then %do;
+ 183        %let formatvar=agef.;
+ 184        %end;
+ 185        %else %if %upcase(&groupvar)=BMDBMIC %then %do;
+ 186        %let formatvar=bmif.;
+ 187        %end;
+ 188        
+ 189        proc sgpanel data=diabetes;
+ 190        title "BMI of Study Participants by &var. and whether they have Diabetes";
+ 191        format diq010 diqf. &groupvar &formatvar;
+ 192        where not missing(bmxbmi);
+ 193        panelby diq010;
+ 194        vbox bmxbmi / category=&groupvar dataskin=crisp;
+ 195        colaxis display=(nolabel);
+ 196        run;
+ 197        %mend;
+ 198        
+ 199        ods graphics on / reset=all;
+ 200        ods graphics on / width=8in;
+ 201        *x=race, y=bmi, group=diabetes;
+ 202        %graph1(groupvar=ridreth3,var=Race);
+ MPRINT(GRAPH1):   proc sgpanel data=diabetes;
+ MPRINT(GRAPH1):   title "BMI of Study Participants by Race and whether they have Diabetes";
+ MPRINT(GRAPH1):   format diq010 diqf. ridreth3 racef.;
+ MPRINT(GRAPH1):   where not missing(bmxbmi);
+ MPRINT(GRAPH1):   panelby diq010;
+ MPRINT(GRAPH1):   vbox bmxbmi / category=ridreth3 dataskin=crisp;
+ MPRINT(GRAPH1):   colaxis display=(nolabel);
+ MPRINT(GRAPH1):   run;
+ 
+ NOTE: PROCEDURE SGPANEL used (Total process time):
+       real time           2.19 seconds
+       cpu time            1.12 seconds
+       
+ NOTE: There were 13137 observations read from the data set WORK.DIABETES.
+       WHERE not MISSING(bmxbmi);
+ 
+ 203        
+ 204        *x=gender, y=bmi, group=diabetes;
+ 205        %graph1(groupvar=riagendr,var=Gender);
+ MPRINT(GRAPH1):   proc sgpanel data=diabetes;
+ MPRINT(GRAPH1):   title "BMI of Study Participants by Gender and whether they have Diabetes";
+ MPRINT(GRAPH1):   format diq010 diqf. riagendr genderf.;
+ MPRINT(GRAPH1):   where not missing(bmxbmi);
+ MPRINT(GRAPH1):   panelby diq010;
+ MPRINT(GRAPH1):   vbox bmxbmi / category=riagendr dataskin=crisp;
+ MPRINT(GRAPH1):   colaxis display=(nolabel);
+ MPRINT(GRAPH1):   run;
+ 
+ NOTE: PROCEDURE SGPANEL used (Total process time):
+       real time           1.81 seconds
+       cpu time            0.71 seconds
+       
+ NOTE: There were 13137 observations read from the data set WORK.DIABETES.
+       WHERE not MISSING(bmxbmi);
+ 
+ 206        
+ 207        
+ 208        *creating graphs just based on children/youth;
+ 209        *bmi grouping only available for (2 to 19 years);
+ 210        *x=bmi_grouping, y=bmi, group=gender;
+ 211        title "BMI of Children/Youth Study Participants (2 to 19 years) by Gender and BMI
+ 211      ! Category";
+ 212        proc sgpanel data=diabetes;
+ 213        format riagendr genderf. bmdbmic bmif.;
+ 214        panelby riagendr;
+ 215        vbox bmxbmi / category=bmdbmic;
+ 216        colaxis display=(nolabel);
+ 217        rowaxis values=(0 to 80 by 15);
+ 218        run;
+ 
+ NOTE: PROCEDURE SGPANEL used (Total process time):
+       real time           0.30 seconds
+       cpu time            0.18 seconds
+       
+ NOTE: There were 15560 observations read from the data set WORK.DIABETES.
+ 
+ 219        
+ 220        ods graphics /attrpriority=none;
+ 221        title "Mean BMI of Children/Youth Study Participants (2 to 19 years) who have diabetes by
+ 221      !  BMI Category";
+ 222        proc sgplot data=diabetes;
+ 223        format diq010 diqf. bmdbmic bmif.;
+ 224        where ridageyr <=19 and diq010=1;
+ 225        vline ridageyr / response=bmxbmi stat=mean weight=samp_wt markers group=bmdbmic;
+ 226        yaxis values=(10 to 45 by 5);
+ 227        styleattrs datasymbols=(TriangleFilled CircleFilled SquareFilled)
+ 228        datalinepatterns=(Solid ShortDash Dot)
+ 229        datacolors=(blue red green);
+ 230        footnote2 "BMI Category 'Underweight' has no observations who have diabetes";
+ 231        run;
+ 
+ NOTE: Since no format is assigned, the numeric category variable will use the default of BEST6.
+ NOTE: PROCEDURE SGPLOT used (Total process time):
+       real time           0.13 seconds
+       cpu time            0.07 seconds
+       
+ NOTE: There were 25 observations read from the data set WORK.DIABETES.
+       WHERE (ridageyr<=19) and (diq010=1);
+ 
+ 232        
+ 233        *creates dataset for a report for all values of a variable;
+ 234        %macro compare_all(var= ,ds_name= );
+ 235        *adding total variable;
+ 236        data diabetes2;
+ 237        set diabetes;
+ 238        output;
+ 239        &var=0;
+ 240        output;
+ 241        run;
+ 242        
+ 243        ods pdf exclude where=(_name_? 'CrossTabs');
+ 244        proc surveyfreq data=diabetes2 missing nosummary;
+ 245        cluster SDMVPSU;
+ 246        strata SDMVSTRA;
+ 247        tables diq010*&var /col nototal;
+ 248        weight samp_wt;
+ 249        ods output CrossTabs=diabetes_var;
+ 250        run;
+ 251        
+ 252        ods pdf exclude where=(_name_? 'OneWay');
+ 253        proc surveyfreq data=diabetes2 missing nosummary;
+ 254        cluster SDMVPSU;
+ 255        strata SDMVSTRA;
+ 256        tables &var /nototal;
+ 257        weight samp_wt;
+ 258        ods output OneWay=varcnt;
+ 259        run;
+ 260        
+ 261        proc sql noprint;
+ 262        select (count(distinct &var)) into :uniVal
+ 263        from varcnt;
+ 264        quit;
+ 265        
+ 266        *creating macro variable that contains number of observations for each variable;
+ 267        %let i=0;
+ 268        data _null_;
+ 269        set varcnt;
+ 270        
+ 271        %do %until (&i>&uniVal);
+ 272        if &var=&i then call symputx(cats("n",&i),put(frequency,5.),'g');
+ 273        %let i= %eval(&i+1);
+ 274        %end;
+ 275        run;
+ 276        
+ 277        data diabetes_var2;
+ 278        set diabetes_var;
+ 279        length value $25;
+ 280        value=put(frequency, 5.) || ' (' || put(colpercent,4.1)||')';
+ 281        run;
+ 282        
+ 283        proc sort data=diabetes_var2; by diq010; run;
+ 284        proc transpose data=diabetes_var2 out=&ds_name(drop=_name_) prefix=col;
+ 285        by diq010;
+ 286        var value;
+ 287        id &var;
+ 288        run;
+ 289        
+ 290        %mend;
+ 291        
+ 292        *proc report of comparing different races;
+ 293        %compare_all(var=ridreth3, ds_name=final_race);
+ MPRINT(COMPARE_ALL):   *adding total variable;
+ MPRINT(COMPARE_ALL):   data diabetes2;
+ MPRINT(COMPARE_ALL):   set diabetes;
+ MPRINT(COMPARE_ALL):   output;
+ MPRINT(COMPARE_ALL):   ridreth3=0;
+ MPRINT(COMPARE_ALL):   output;
+ MPRINT(COMPARE_ALL):   run;
+ 
+ NOTE: There were 15560 observations read from the data set WORK.DIABETES.
+ NOTE: The data set WORK.DIABETES2 has 31120 observations and 11 variables.
+ NOTE: DATA statement used (Total process time):
+       real time           0.01 seconds
+       cpu time            0.01 seconds
+       
+ 
+ MPRINT(COMPARE_ALL):   ods pdf exclude where=(_name_? 'CrossTabs');
+ MPRINT(COMPARE_ALL):   proc surveyfreq data=diabetes2 missing nosummary;
+ MPRINT(COMPARE_ALL):   cluster SDMVPSU;
+ MPRINT(COMPARE_ALL):   strata SDMVSTRA;
+ MPRINT(COMPARE_ALL):   tables diq010*ridreth3 /col nototal;
+ MPRINT(COMPARE_ALL):   weight samp_wt;
+ MPRINT(COMPARE_ALL):   ods output CrossTabs=diabetes_var;
+ MPRINT(COMPARE_ALL):   run;
+ NOTE: 2520 observations were omitted due to nonpositive weights.
+ NOTE: The data set WORK.DIABETES_VAR has 35 observations and 13 variables.
+ NOTE: PROCEDURE SURVEYFREQ used (Total process time):
+       real time           0.06 seconds
+       cpu time            0.10 seconds
+       
+ 
+ MPRINT(COMPARE_ALL):   ods pdf exclude where=(_name_? 'OneWay');
+ MPRINT(COMPARE_ALL):   proc surveyfreq data=diabetes2 missing nosummary;
+ MPRINT(COMPARE_ALL):   cluster SDMVPSU;
+ MPRINT(COMPARE_ALL):   strata SDMVSTRA;
+ MPRINT(COMPARE_ALL):   tables ridreth3 /nototal;
+ MPRINT(COMPARE_ALL):   weight samp_wt;
+ MPRINT(COMPARE_ALL):   ods output OneWay=varcnt;
+ MPRINT(COMPARE_ALL):   run;
+ NOTE: 2520 observations were omitted due to nonpositive weights.
+ NOTE: The data set WORK.VARCNT has 7 observations and 9 variables.
+ NOTE: PROCEDURE SURVEYFREQ used (Total process time):
+       real time           0.07 seconds
+       cpu time            0.07 seconds
+       
+ 
+ MPRINT(COMPARE_ALL):   proc sql noprint;
+ MPRINT(COMPARE_ALL):   select (count(distinct ridreth3)) into :uniVal from varcnt;
+ MPRINT(COMPARE_ALL):   quit;
+ NOTE: PROCEDURE SQL used (Total process time):
+       real time           0.01 seconds
+       cpu time            0.00 seconds
+       
+ 
+ MPRINT(COMPARE_ALL):   *creating macro variable that contains number of observations for each 
+ variable;
+ MPRINT(COMPARE_ALL):   data _null_;
+ MPRINT(COMPARE_ALL):   set varcnt;
+ MPRINT(COMPARE_ALL):   if ridreth3=0 then call symputx(cats("n",0),put(frequency,5.),'g');
+ MPRINT(COMPARE_ALL):   if ridreth3=1 then call symputx(cats("n",1),put(frequency,5.),'g');
+ MPRINT(COMPARE_ALL):   if ridreth3=2 then call symputx(cats("n",2),put(frequency,5.),'g');
+ MPRINT(COMPARE_ALL):   if ridreth3=3 then call symputx(cats("n",3),put(frequency,5.),'g');
+ MPRINT(COMPARE_ALL):   if ridreth3=4 then call symputx(cats("n",4),put(frequency,5.),'g');
+ MPRINT(COMPARE_ALL):   if ridreth3=5 then call symputx(cats("n",5),put(frequency,5.),'g');
+ MPRINT(COMPARE_ALL):   if ridreth3=6 then call symputx(cats("n",6),put(frequency,5.),'g');
+ MPRINT(COMPARE_ALL):   if ridreth3=7 then call symputx(cats("n",7),put(frequency,5.),'g');
+ MPRINT(COMPARE_ALL):   run;
+ 
+ NOTE: There were 7 observations read from the data set WORK.VARCNT.
+ NOTE: DATA statement used (Total process time):
+       real time           0.00 seconds
+       cpu time            0.00 seconds
+       
+ 
+ MPRINT(COMPARE_ALL):   data diabetes_var2;
+ MPRINT(COMPARE_ALL):   set diabetes_var;
+ MPRINT(COMPARE_ALL):   length value $25;
+ MPRINT(COMPARE_ALL):   value=put(frequency, 5.) || ' (' || put(colpercent,4.1)||')';
+ MPRINT(COMPARE_ALL):   run;
+ 
+ NOTE: There were 35 observations read from the data set WORK.DIABETES_VAR.
+ NOTE: The data set WORK.DIABETES_VAR2 has 35 observations and 14 variables.
+ NOTE: DATA statement used (Total process time):
+       real time           0.01 seconds
+       cpu time            0.01 seconds
+       
+ 
+ MPRINT(COMPARE_ALL):   proc sort data=diabetes_var2;
+ MPRINT(COMPARE_ALL):   by diq010;
+ MPRINT(COMPARE_ALL):   run;
+ 
+ NOTE: There were 35 observations read from the data set WORK.DIABETES_VAR2.
+ NOTE: The data set WORK.DIABETES_VAR2 has 35 observations and 14 variables.
+ NOTE: PROCEDURE SORT used (Total process time):
+       real time           0.01 seconds
+       cpu time            0.00 seconds
+       
+ 
+ MPRINT(COMPARE_ALL):   proc transpose data=diabetes_var2 out=final_race(drop=_name_) prefix=col;
+ MPRINT(COMPARE_ALL):   by diq010;
+ MPRINT(COMPARE_ALL):   var value;
+ MPRINT(COMPARE_ALL):   id ridreth3;
+ MPRINT(COMPARE_ALL):   run;
+ 
+ NOTE: There were 35 observations read from the data set WORK.DIABETES_VAR2.
+ NOTE: The data set WORK.FINAL_RACE has 5 observations and 8 variables.
+ NOTE: PROCEDURE TRANSPOSE used (Total process time):
+       real time           0.02 seconds
+       cpu time            0.01 seconds
+       
+ 
+ 294        
+ 295        options missing='';
+ 296        title "Prevalence of Diabetes among different Races";
+ 297        proc report data=final_race nowd;
+ 298        columns diq010 col0 col1 col2 col3 col4 col6 col7;
+ 299        define diq010 / display "//N(%)/Diabetes Diagnosis" format=diqf.;
+ 300        define col0 / display "Total/n=&n0" right style=[backgroundcolor=lightsteelblue];
+ 301        define col1 / display "Mexican American/n=&n1" center;
+ 302        define col2 / display "Other Hispanic/n=&n2" center;
+ 303        define col3 / display "White/n=&n3" center;
+ 304        define col4 / display "Black/n=&n4" center;
+ 305        define col6 / display "Asian/n=&n6" center;
+ 306        define col7 / display "Other - including multi-race/n=&n7" center;
+ 307        run;
+ 
+ NOTE: There were 5 observations read from the data set WORK.FINAL_RACE.
+ NOTE: PROCEDURE REPORT used (Total process time):
+       real time           0.05 seconds
+       cpu time            0.04 seconds
+       
+ 
+ 308        
+ 309        *formats macro variables;
+ 310        %macro format(value,format);
+ 311        %if %datatyp(&value)=CHAR
+ 312        %then %sysfunc(putc(&value,&format));
+ 313        %else %left(%qsysfunc(putn(&value,&format)));
+ 314        %mend format;
+ 315        
+ 316        *create macro for specific to compare different 2 groups and different vars;
+ 317        %macro compare_two(var= ,group1= ,group2= );
+ 318        %if %upcase(&var)=RIDRETH3 %then %do;
+ 319        %let formatvar=racef.;
+ 320        %end;
+ 321        %else %if %upcase(&var)=RIAGENDR %then %do;
+ 322        %let formatvar=genderf.;
+ 323        %end;
+ 324        %else %if %upcase(&var)=RIDAGEYR %then %do;
+ 325        %let formatvar=agef.;
+ 326        %end;
+ 327        %else %if %upcase(&var)=BMDBMIC %then %do;
+ 328        %let formatvar=bmif.;
+ 329        %end;
+ 330        
+ 331        *getting labels are specific groups of interest;
+ 332        %let group1l = %format(&group1,&formatvar);
+ 333        %let group2l = %format(&group2,&formatvar);
+ 334        
+ 335        ods pdf exclude where=(_name_? 'CrossTabs');
+ 336        proc surveyfreq data=diabetes missing nosummary;
+ 337        cluster SDMVPSU;
+ 338        strata SDMVSTRA;
+ 339        tables diq010*&var /col nototal;
+ 340        weight samp_wt;
+ 341        ods output CrossTabs=diabetes_var;
+ 342        run;
+ 343        
+ 344        ods pdf exclude where=(_name_? 'OneWay');
+ 345        proc surveyfreq data=diabetes missing nosummary;
+ 346        cluster SDMVPSU;
+ 347        strata SDMVSTRA;
+ 348        tables &var /nototal;
+ 349        weight samp_wt;
+ 350        ods output OneWay=varcnt;
+ 351        run;
+ 352        
+ 353        data _null_;
+ 354        set varcnt;
+ 355        if &var=&group1 then call symput("n1",put(frequency,5.));
+ 356        else if &var=&group2 then call symput("n2",put(frequency,5.));
+ 357        run;
+ 358        
+ 359        data diabetes_var2;
+ 360        set diabetes_var;
+ 361        length value $25;
+ 362        where &var in(&group1, &group2);
+ 363        value=put(frequency, 5.) || ' (' || put(colpercent,4.1)||')';
+ 364        run;
+ 365        
+ 366        proc sort data=diabetes_var2; by diq010; run;
+ 367        proc transpose data=diabetes_var2 out=diabetes3(drop=_name_) prefix=col;
+ 368        by diq010;
+ 369        var value;
+ 370        id &var;
+ 371        run;
+ 372        
+ 373        ods pdf exclude where=(_name_? 'ChiSq');
+ 374        ods pdf exclude where=(_name_? 'CrossTabs');
+ 375        proc surveyfreq data=diabetes missing nosummary;
+ 376        cluster SDMVPSU;
+ 377        strata SDMVSTRA;
+ 378        tables diq010*&var /chisq nototal;
+ 379        weight samp_wt;
+ 380        ods output ChiSq=pvalue;
+ 381        run;
+ 382        
+ 383        data pvalue2;
+ 384        set pvalue;
+ 385        where Label1="Pr > ChiSq";
+ 386        run;
+ 387        
+ 388        data final;
+ 389        set diabetes3 pvalue2(keep=nValue1);
+ 390        run;
+ 391        
+ 392        %if %upcase(&var)=BMDBMIC %then %do;
+ 393        title "Prevalence of Diabetes between Children/Youth Study Participants (2 to 19 years)
+ 393      !  of &group1l. and &group2l.";
+ 394        %end;
+ 395        %else %do;
+ 396        title "Prevalence of Diabetes between &group1l. and &group2l.";
+ 397        %end;
+ 398        proc report data=final nowd;
+ 399        columns diq010 col&group1 col&group2 nValue1;
+ 400        define diq010 / display "//N(%)/Diabetes Diagnosis" format=diqf.;
+ 401        define col&group1 / display "&group1l/n=&n1" center;
+ 402        define col&group2 / display "&group2l/n=&n2" center;
+ 403        define nValue1 / display "P-Value*" format=pvalue6.4 style(column)=[just=right
+ 403      ! cellwidth=2cm vjust=bottom]
+ 404        style(header)=[just=right cellwidth=2cm];
+ 405        compute nValue1;
+ 406        if nValue1<0.05 then do;
+ 407        call define(_col_,"style","style=[fontweight=bold]");
+ 408        end;
+ 409        endcomp;
+ 410        footnote2 h=10pt "*Rao-Scott Chi-Square test used to compare &group1l. and &group2l.";
+ 411        run;
+ 412        
+ 413        %mend;
+ 414        
+ 415        options missing='';
+ 416        %compare_two(var=riagendr,group1=1,group2=2);
+ MPRINT(COMPARE_TWO):   *getting labels are specific groups of interest;
+ MPRINT(COMPARE_TWO):   ods pdf exclude where=(_name_? 'CrossTabs');
+ MPRINT(COMPARE_TWO):   proc surveyfreq data=diabetes missing nosummary;
+ MPRINT(COMPARE_TWO):   cluster SDMVPSU;
+ MPRINT(COMPARE_TWO):   strata SDMVSTRA;
+ MPRINT(COMPARE_TWO):   tables diq010*riagendr /col nototal;
+ MPRINT(COMPARE_TWO):   weight samp_wt;
+ MPRINT(COMPARE_TWO):   ods output CrossTabs=diabetes_var;
+ MPRINT(COMPARE_TWO):   run;
+ NOTE: 1260 observations were omitted due to nonpositive weights.
+ NOTE: The data set WORK.DIABETES_VAR has 10 observations and 13 variables.
+ NOTE: PROCEDURE SURVEYFREQ used (Total process time):
+       real time           0.06 seconds
+       cpu time            0.06 seconds
+       
+ 
+ MPRINT(COMPARE_TWO):   ods pdf exclude where=(_name_? 'OneWay');
+ MPRINT(COMPARE_TWO):   proc surveyfreq data=diabetes missing nosummary;
+ MPRINT(COMPARE_TWO):   cluster SDMVPSU;
+ MPRINT(COMPARE_TWO):   strata SDMVSTRA;
+ MPRINT(COMPARE_TWO):   tables riagendr /nototal;
+ MPRINT(COMPARE_TWO):   weight samp_wt;
+ MPRINT(COMPARE_TWO):   ods output OneWay=varcnt;
+ MPRINT(COMPARE_TWO):   run;
+ NOTE: 1260 observations were omitted due to nonpositive weights.
+ NOTE: The data set WORK.VARCNT has 2 observations and 9 variables.
+ NOTE: PROCEDURE SURVEYFREQ used (Total process time):
+       real time           0.04 seconds
+       cpu time            0.04 seconds
+       
+ 
+ MPRINT(COMPARE_TWO):   data _null_;
+ MPRINT(COMPARE_TWO):   set varcnt;
+ MPRINT(COMPARE_TWO):   if riagendr=1 then call symput("n1",put(frequency,5.));
+ MPRINT(COMPARE_TWO):   else if riagendr=2 then call symput("n2",put(frequency,5.));
+ MPRINT(COMPARE_TWO):   run;
+ 
+ NOTE: There were 2 observations read from the data set WORK.VARCNT.
+ NOTE: DATA statement used (Total process time):
+       real time           0.00 seconds
+       cpu time            0.00 seconds
+       
+ 
+ MPRINT(COMPARE_TWO):   data diabetes_var2;
+ MPRINT(COMPARE_TWO):   set diabetes_var;
+ MPRINT(COMPARE_TWO):   length value $25;
+ MPRINT(COMPARE_TWO):   where riagendr in(1, 2);
+ MPRINT(COMPARE_TWO):   value=put(frequency, 5.) || ' (' || put(colpercent,4.1)||')';
+ MPRINT(COMPARE_TWO):   run;
+ 
+ NOTE: There were 10 observations read from the data set WORK.DIABETES_VAR.
+       WHERE riagendr in (1, 2);
+ NOTE: The data set WORK.DIABETES_VAR2 has 10 observations and 14 variables.
+ NOTE: DATA statement used (Total process time):
+       real time           0.01 seconds
+       cpu time            0.01 seconds
+       
+ 
+ MPRINT(COMPARE_TWO):   proc sort data=diabetes_var2;
+ MPRINT(COMPARE_TWO):   by diq010;
+ MPRINT(COMPARE_TWO):   run;
+ 
+ NOTE: There were 10 observations read from the data set WORK.DIABETES_VAR2.
+ NOTE: The data set WORK.DIABETES_VAR2 has 10 observations and 14 variables.
+ NOTE: PROCEDURE SORT used (Total process time):
+       real time           0.01 seconds
+       cpu time            0.01 seconds
+       
+ 
+ MPRINT(COMPARE_TWO):   proc transpose data=diabetes_var2 out=diabetes3(drop=_name_) prefix=col;
+ MPRINT(COMPARE_TWO):   by diq010;
+ MPRINT(COMPARE_TWO):   var value;
+ MPRINT(COMPARE_TWO):   id riagendr;
+ MPRINT(COMPARE_TWO):   run;
+ 
+ NOTE: There were 10 observations read from the data set WORK.DIABETES_VAR2.
+ NOTE: The data set WORK.DIABETES3 has 5 observations and 3 variables.
+ NOTE: PROCEDURE TRANSPOSE used (Total process time):
+       real time           0.02 seconds
+       cpu time            0.03 seconds
+       
+ 
+ MPRINT(COMPARE_TWO):   ods pdf exclude where=(_name_? 'ChiSq');
+ MPRINT(COMPARE_TWO):   ods pdf exclude where=(_name_? 'CrossTabs');
+ MPRINT(COMPARE_TWO):   proc surveyfreq data=diabetes missing nosummary;
+ MPRINT(COMPARE_TWO):   cluster SDMVPSU;
+ MPRINT(COMPARE_TWO):   strata SDMVSTRA;
+ MPRINT(COMPARE_TWO):   tables diq010*riagendr /chisq nototal;
+ MPRINT(COMPARE_TWO):   weight samp_wt;
+ MPRINT(COMPARE_TWO):   ods output ChiSq=pvalue;
+ MPRINT(COMPARE_TWO):   run;
+ NOTE: 1260 observations were omitted due to nonpositive weights.
+ NOTE: The data set WORK.PVALUE has 11 observations and 5 variables.
+ NOTE: PROCEDURE SURVEYFREQ used (Total process time):
+       real time           0.06 seconds
+       cpu time            0.06 seconds
+       
+ 
+ MPRINT(COMPARE_TWO):   data pvalue2;
+ MPRINT(COMPARE_TWO):   set pvalue;
+ MPRINT(COMPARE_TWO):   where Label1="Pr > ChiSq";
+ MPRINT(COMPARE_TWO):   run;
+ 
+ NOTE: There were 1 observations read from the data set WORK.PVALUE.
+       WHERE Label1='Pr > ChiSq';
+ NOTE: The data set WORK.PVALUE2 has 1 observations and 5 variables.
+ NOTE: DATA statement used (Total process time):
+       real time           0.01 seconds
+       cpu time            0.00 seconds
+       
+ 
+ MPRINT(COMPARE_TWO):   data final;
+ MPRINT(COMPARE_TWO):   set diabetes3 pvalue2(keep=nValue1);
+ MPRINT(COMPARE_TWO):   run;
+ 
+ NOTE: There were 5 observations read from the data set WORK.DIABETES3.
+ NOTE: There were 1 observations read from the data set WORK.PVALUE2.
+ NOTE: The data set WORK.FINAL has 6 observations and 4 variables.
+ NOTE: DATA statement used (Total process time):
+       real time           0.01 seconds
+       cpu time            0.01 seconds
+       
+ 
+ MPRINT(COMPARE_TWO):   title "Prevalence of Diabetes between Male and Female";
+ MPRINT(COMPARE_TWO):   proc report data=final nowd;
+ MPRINT(COMPARE_TWO):   columns diq010 col1 col2 nValue1;
+ MPRINT(COMPARE_TWO):   define diq010 / display "//N(%)/Diabetes Diagnosis" format=diqf.;
+ MPRINT(COMPARE_TWO):   define col1 / display "Male/n= 7085" center;
+ MPRINT(COMPARE_TWO):   define col2 / display "Female/n= 7215" center;
+ MPRINT(COMPARE_TWO):   define nValue1 / display "P-Value*" format=pvalue6.4 
+ style(column)=[just=right cellwidth=2cm vjust=bottom] style(header)=[just=right cellwidth=2cm];
+ MPRINT(COMPARE_TWO):   compute nValue1;
+ MPRINT(COMPARE_TWO):   if nValue1<0.05 then do;
+ MPRINT(COMPARE_TWO):   call define(_col_,"style","style=[fontweight=bold]");
+ MPRINT(COMPARE_TWO):   end;
+ MPRINT(COMPARE_TWO):   endcomp;
+ MPRINT(COMPARE_TWO):   footnote2 h=10pt "*Rao-Scott Chi-Square test used to compare Male and 
+ Female";
+ MPRINT(COMPARE_TWO):   run;
+ NOTE: There were 6 observations read from the data set WORK.FINAL.
+ NOTE: PROCEDURE REPORT used (Total process time):
+       real time           0.02 seconds
+       cpu time            0.03 seconds
+       
+ 
+ 417        
+ 418        ods pdf close;
+ NOTE: ODS PDF printed 6 pages to C:\Users\alwwi\Documents\bios669\final_proj\final_alicewyu.PDF.
+ 419        
+ 420        
+ 421        OPTIONS NONOTES NOSTIMER NOSOURCE NOSYNTAXCHECK;
+ 433        
